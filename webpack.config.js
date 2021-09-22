@@ -43,6 +43,6 @@ module.exports = {
   ],
   devServer: {
     open: true,
-    port: 3003,
+    port: 3006,
   },
 }

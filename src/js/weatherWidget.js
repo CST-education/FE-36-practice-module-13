@@ -1,75 +1,131 @@
-// import axios from 'axios'
-// console.log('axios', axios)
+// console.log(`hello`)
+import axios from 'axios'
+import template from '../templates/template.handlebars'
+import refs from './refs'
+console.dir(axios)
 
-// axios.defaults.baseURL = `https://api.openweathermap.org/data/2.5/weather`
+let BASE_URL = `https://api.openweathermap.org/data/2.5/weather`
+axios.defaults.baseURL = BASE_URL
+console.log(axios.defaults.baseURL)
 
-const refs = {
-  city: document.querySelector('.city'),
-  icon: document.querySelector('.icon'),
-  temp: document.querySelector('.temp'),
-  desc: document.querySelector('.description'),
-  humidity: document.querySelector('.humidity'),
-  wind: document.querySelector('.wind'),
-  weather: document.querySelector('.weather'),
-  searchInput: document.querySelector('.search-bar'),
-  searchBtn: document.querySelector('.search-btn'),
+const { searchContainer, searchForm, widgetContainer, city, temp, icon, description, humidity, wind } = refs
+// console.log(searchForm, widgetContainer, city, temp, icon, description, humidity, wind)
+let API_key = `b17a2dddb01d7481fea6373f92c2e546`
+let cityName = 'Kyiv'
+
+class WeatherWidget {
+  constructor(baseUrl, apiKey, formRef, searchInput, templateFunc, insertContainer) {
+    this.baseUrl = baseUrl
+    this.apiKey = apiKey
+    this.formRef = formRef
+    this.searchInput = searchInput
+    this._cityName = 'Kyiv'
+    this.templateFunc = templateFunc
+    this.insertContainer = insertContainer
+  }
+  get cityName() {
+    return this._cityName
+  }
+  set cityName(value) {
+    return (this._cityName = value)
+  }
+
+  getSearchValue() {
+    this.formRef.addEventListener('submit', e => {
+      e.preventDefault()
+      this.insertContainer.innerHTML = ''
+      this.cityName = e.target.elements[this.searchInput].value
+    })
+  }
+
+  async getFetch() {
+    let params = `?q=${this.cityName}&appid=${this.apiKey}`
+
+    try {
+      let r = await axios.get(params)
+      console.log(r.data)
+      localStorage.setItem('wetherData', JSON.stringify(r.data))
+      this.renderData(r.data)
+    } catch (e) {
+      console.log(e)
+    }
+
+    // let url = this.baseUrl + params
+    // try {
+    //   let r = await fetch(url)
+    //   let d = await r.json()
+    //   localStorage.setItem('wetherData', JSON.stringify(d))
+    //   this.renderData(d)
+    // } catch (err) {
+    //   console.log(err)
+    // }
+
+    // fetch(url)
+    //   .then(r => r.json())
+    //   .then(d => {
+    //     //
+    //     console.log(d)
+    //     localStorage.setItem('wetherData', JSON.stringify(d))
+    //     renderData(d)
+    //   })
+    //   .catch(e => console.log(e))
+  }
+  renderData(obj = null) {
+    if (obj) {
+      let markup = this.templateFunc(obj)
+      this.insertContainer.insertAdjacentHTML('beforeend', markup)
+    } else {
+      let weatherDataFromLS = JSON.parse(localStorage.getItem('wetherData'))
+      let markup = this.templateFunc(weatherDataFromLS)
+      this.insertContainer.insertAdjacentHTML('beforeend', markup)
+    }
+  }
+  showWidget() {
+    this.getFetch()
+    this.renderData()
+  }
+  hideWidget() {
+    //   чистить слушателя
+    // скрывать блок widgetContainer
+  }
 }
+const newWeatherWidget = new WeatherWidget(BASE_URL, API_key, searchForm, `search`, template, searchContainer)
+console.log(newWeatherWidget)
 
-let baseUrl = `https://api.openweathermap.org/data/2.5/weather`
-let apiKey = `b17a2dddb01d7481fea6373f92c2e546`
+newWeatherWidget.showWidget()
 
-class Fetch {
-  constructor() {
-    this.key = apiKey
-  }
-  //   getDataWithAxios(cityName) {
-  //     let params = `?q=${cityName}&appid=${this.key}`
-  //     axios
-  //       .get(params)
-  //       .then(d => d.data)
-  //       .then(result => this.showWeather(result))
-  //       .catch(error => console.error(error))
-  //   }
-  getFetch(cityName) {
-    let url = baseUrl + `?q=${cityName}&appid=${this.key}`
-    fetch(url)
-      .then(response => {
-        console.log(response)
-        if (!response.ok) {
-          alert('Bad Request!!!')
-          throw new Error('Bad Request!!!')
-        } else {
-          return response.json()
-        }
-      })
-      .then(data => this.showWeather(data))
-      .catch(err => console.log(err))
-  }
-  showWeather(data) {
-    refs.weather.classList.remove('loading')
-    let icon = data.weather[0].icon
-    let temp = Math.round(data.main.temp - 273.15)
-    let hum = data.main.humidity
-    let wind = data.wind.speed
-    let desc = data.weather[0].description
-    let city = data.name
+// searchForm.addEventListener('submit', e => {
+//   e.preventDefault()
+//   cityName = e.target.elements.search.value
+//   let url = `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${API_key}`
+//   cityName
+//     ? fetch(url)
+//         .then(r => r.json())
+//         .then(d => {
+//           console.log(d)
+//           localStorage.setItem('wetherData', JSON.stringify(d))
+//           renderWeatherData(d)
+//         })
+//     : alert(`введите данные`)
+//   searchForm.reset()
+// })
+// let weatherDataFromLS = JSON.parse(localStorage.getItem('wetherData'))
+// renderWeatherData(weatherDataFromLS)
 
-    refs.temp.textContent = `${temp}°C`
-    refs.humidity.textContent = `Humidity: ${hum}%`
-    refs.wind.textContent = `Wind speed: ${wind}km/h`
-    refs.icon.src = `https://openweathermap.org/img/wn/${icon}.png`
-    refs.icon.alt = desc
-    refs.desc.textContent = desc
-    refs.city.textContent = `Weather in ${city}`
-  }
-}
-
-const myWeather = new Fetch()
-console.log(myWeather)
-myWeather.getFetch('Kyiv')
-refs.searchBtn.addEventListener('click', () => {
-  let citySearch = refs.searchInput.value
-  // console.log(citySearch);
-  myWeather.getFetch(citySearch)
-  //   myWeather.getDataWithAxios(citySearch);
-})
+// function renderWeatherData(obj) {
+//   const {
+//     name,
+//     main: { temp: t, humidity: h },
+//     weather,
+//     wind: { speed },
+//   } = obj
+//   // удаляем класс loading, чтобы отобразить данные о погоде
+//   widgetContainer.classList.remove('loading')
+//   city.textContent = `Weather in ${name}`
+//   temp.textContent = `${Math.round(t - 273.15)}°C`
+//   icon.setAttribute('src', `https://openweathermap.org/img/wn/${weather[0].icon}.png`)
+//   icon.setAttribute('alt', weather[0].description)
+//   description.textContent = weather[0].description
+//   humidity.textContent = `Humidity: ${h}%`
+//   wind.textContent = `Wind speed: ${speed} km/h`
+// }
