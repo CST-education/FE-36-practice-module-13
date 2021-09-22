@@ -6,14 +6,12 @@
     {{main.temp}}°C
   </h1>
   <div class='flex'>
-    {{!-- <img
-          src="https://openweathermap.org/img/wn/{{weather[0].icon}}.png"
-          alt="{{weather[0].description}}"
-          class="icon"
-        /> --}}
-    <div class='description'>
-      {{!-- {{weather[0].description}} --}}
-    </div>
+    {{#each weather}}
+      <img src="https://openweathermap.org/img/wn/{{this.icon}}.png" alt="{{this.description}}" class='icon' />
+      <div class='description'>
+        {{this.description}}
+      </div>
+    {{/each}}
   </div>
   <div class='humidity'>
     Humidity: {{main.humidity}}%

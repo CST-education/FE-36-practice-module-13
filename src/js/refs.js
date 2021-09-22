@@ -1,5 +1,7 @@
 export default {
-  searchContainer: document.querySelector('.search'),
+  showBtn: document.getElementById('show'),
+  hideBtn: document.getElementById('hide'),
+  templateContainer: document.getElementById('templateContainer'),
   searchForm: document.getElementById('search-form'),
   widgetContainer: document.querySelector('.weather'),
   city: document.querySelector('.city'),

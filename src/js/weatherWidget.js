@@ -2,16 +2,16 @@
 import axios from 'axios'
 import template from '../templates/template.handlebars'
 import refs from './refs'
-console.dir(axios)
+// console.dir(axios)
+import { setErrorMsg } from './notification'
 
 let BASE_URL = `https://api.openweathermap.org/data/2.5/weather`
 axios.defaults.baseURL = BASE_URL
-console.log(axios.defaults.baseURL)
+// console.log(axios.defaults.baseURL)
 
-const { searchContainer, searchForm, widgetContainer, city, temp, icon, description, humidity, wind } = refs
+const { showBtn, hideBtn, templateContainer, searchForm } = refs
 // console.log(searchForm, widgetContainer, city, temp, icon, description, humidity, wind)
 let API_key = `b17a2dddb01d7481fea6373f92c2e546`
-let cityName = 'Kyiv'
 
 class WeatherWidget {
   constructor(baseUrl, apiKey, formRef, searchInput, templateFunc, insertContainer) {
@@ -22,6 +22,7 @@ class WeatherWidget {
     this._cityName = 'Kyiv'
     this.templateFunc = templateFunc
     this.insertContainer = insertContainer
+    this.isShowWidget = false
   }
   get cityName() {
     return this._cityName
@@ -31,101 +32,94 @@ class WeatherWidget {
   }
 
   getSearchValue() {
-    this.formRef.addEventListener('submit', e => {
-      e.preventDefault()
-      this.insertContainer.innerHTML = ''
-      this.cityName = e.target.elements[this.searchInput].value
-    })
+    this.formRef.addEventListener('submit', this.handleSubmit)
   }
 
+  handleSubmit = e => {
+    e.preventDefault()
+    let inputValue = e.target.elements[this.searchInput].value
+    // проверяем, есть ли инпуте данные и не совпадают ли они с уже существующими
+    if (inputValue && inputValue !== this.cityName) {
+      // перед запросом чистим контейнер с рендером данных
+      this.insertContainer.innerHTML = ''
+      // если значение из формы отличается от сохраненного значения
+      // перезаписываем его и делаем запрос
+      this.cityName = inputValue
+      // делаем запрос
+      this.getFetch()
+      // зачищаем форму после отправки запроса
+      this.formRef.reset()
+    } else {
+      setErrorMsg(`Enter the City Name please!`)
+    }
+  }
   async getFetch() {
+    // асинхронный запрос через axios
     let params = `?q=${this.cityName}&appid=${this.apiKey}`
-
     try {
       let r = await axios.get(params)
-      console.log(r.data)
-      localStorage.setItem('wetherData', JSON.stringify(r.data))
+      //   console.log(r.data)
+      localStorage.setItem('weatherData', JSON.stringify(r.data))
       this.renderData(r.data)
     } catch (e) {
       console.log(e)
     }
 
+    // асинхронный запрос через fetch
     // let url = this.baseUrl + params
     // try {
     //   let r = await fetch(url)
     //   let d = await r.json()
-    //   localStorage.setItem('wetherData', JSON.stringify(d))
+    //   localStorage.setItem('weatherData', JSON.stringify(d))
     //   this.renderData(d)
     // } catch (err) {
     //   console.log(err)
     // }
 
+    // классический запрос через fetch
     // fetch(url)
     //   .then(r => r.json())
     //   .then(d => {
     //     //
     //     console.log(d)
-    //     localStorage.setItem('wetherData', JSON.stringify(d))
+    //     localStorage.setItem('weatherData', JSON.stringify(d))
     //     renderData(d)
     //   })
     //   .catch(e => console.log(e))
   }
-  renderData(obj = null) {
-    if (obj) {
-      let markup = this.templateFunc(obj)
-      this.insertContainer.insertAdjacentHTML('beforeend', markup)
-    } else {
-      let weatherDataFromLS = JSON.parse(localStorage.getItem('wetherData'))
-      let markup = this.templateFunc(weatherDataFromLS)
-      this.insertContainer.insertAdjacentHTML('beforeend', markup)
-    }
+  renderData(obj) {
+    let markup = this.templateFunc(obj)
+    this.insertContainer.insertAdjacentHTML('beforeend', markup)
   }
   showWidget() {
-    this.getFetch()
-    this.renderData()
+    console.log('show', this.isShowWidget)
+    if (this.isShowWidget) {
+      return
+    } else {
+      this.insertContainer.style.display = 'block'
+      let weatherDataFromLS = JSON.parse(localStorage.getItem('weatherData'))
+      console.log('weatherDataFromLS', weatherDataFromLS)
+      this.renderData(weatherDataFromLS)
+      this.getSearchValue()
+      this.isShowWidget = true
+    }
   }
   hideWidget() {
-    //   чистить слушателя
-    // скрывать блок widgetContainer
+    console.log(this.isShowWidget)
+    if (this.isShowWidget) {
+      // удаляем слушателя
+      this.formRef.removeEventListener('submit', this.handleSubmit)
+      // зачищаем и скрываем контейнер
+      this.insertContainer.innerHTML = ''
+      this.insertContainer.style.display = 'none'
+      this.isShowWidget = false
+    } else {
+      return
+    }
   }
 }
-const newWeatherWidget = new WeatherWidget(BASE_URL, API_key, searchForm, `search`, template, searchContainer)
-console.log(newWeatherWidget)
-
+const newWeatherWidget = new WeatherWidget(BASE_URL, API_key, searchForm, `search`, template, templateContainer)
+// console.log(newWeatherWidget)
 newWeatherWidget.showWidget()
-
-// searchForm.addEventListener('submit', e => {
-//   e.preventDefault()
-//   cityName = e.target.elements.search.value
-//   let url = `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${API_key}`
-//   cityName
-//     ? fetch(url)
-//         .then(r => r.json())
-//         .then(d => {
-//           console.log(d)
-//           localStorage.setItem('wetherData', JSON.stringify(d))
-//           renderWeatherData(d)
-//         })
-//     : alert(`введите данные`)
-//   searchForm.reset()
-// })
-// let weatherDataFromLS = JSON.parse(localStorage.getItem('wetherData'))
-// renderWeatherData(weatherDataFromLS)
-
-// function renderWeatherData(obj) {
-//   const {
-//     name,
-//     main: { temp: t, humidity: h },
-//     weather,
-//     wind: { speed },
-//   } = obj
-//   // удаляем класс loading, чтобы отобразить данные о погоде
-//   widgetContainer.classList.remove('loading')
-//   city.textContent = `Weather in ${name}`
-//   temp.textContent = `${Math.round(t - 273.15)}°C`
-//   icon.setAttribute('src', `https://openweathermap.org/img/wn/${weather[0].icon}.png`)
-//   icon.setAttribute('alt', weather[0].description)
-//   description.textContent = weather[0].description
-//   humidity.textContent = `Humidity: ${h}%`
-//   wind.textContent = `Wind speed: ${speed} km/h`
-// }
+showBtn.addEventListener('click', newWeatherWidget.showWidget.bind(newWeatherWidget))
+hideBtn.addEventListener('click', newWeatherWidget.hideWidget.bind(newWeatherWidget))
